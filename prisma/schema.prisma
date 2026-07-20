@@ -1,0 +1,248 @@
+// PCP Planner data model
+// Configured for Postgres (required for deployment on Render — its
+// filesystem is ephemeral, so SQLite files would be wiped on every deploy).
+// DATABASE_URL should point at a Postgres connection string; see
+// DEPLOYMENT.md for how to provision one on Render for both local dev and
+// production.
+//
+// Note: fields that would naturally be Prisma enums (membershipTier,
+// status, type, severity, likelihood, ccpStatus) are typed as String
+// instead of a real Prisma enum, and facilityProfile is stored as a
+// serialized JSON string instead of a native Json column. This was
+// originally done for SQLite compatibility during local prototyping; it
+// still works fine on Postgres and was left as-is to avoid an unnecessary
+// migration, but you're free to convert these to a native `enum` type and
+// `Json` column respectively now that you're on Postgres. Allowed values
+// for each String-typed field are documented in a comment above the field
+// and enforced in application code (see src/lib and the API routes).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Accounts -----------------------------------------------------------
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String
+  name           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Billing / membership status. A user unlocks a plan with a one-time fee.
+  // An active storage subscription extends retention beyond the default window
+  // and enables cloud sync across sessions/devices.
+  // Allowed values: "FREE" | "UNLOCKED"
+  membershipTier         String    @default("FREE")
+  storageSubscriptionEnd DateTime? // null = no active extended-storage subscription
+  stripeCustomerId       String?
+  dataDeletionRequestedAt DateTime? // set when user requests account/data purge
+
+  plans   Plan[]
+  sessions SessionToken[]
+}
+
+// Lightweight session token table (kept separate from NextAuth's own JWT
+// session so we retain an auditable login record without extra adapters).
+model SessionToken {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+  userAgent String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// --- Preventive Control Plan ---------------------------------------------
+
+model Plan {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name      String   @default("Untitled Preventive Control Plan")
+  // Allowed values: "DRAFT" | "HAZARD_ANALYSIS_COMPLETE" | "CCP_COMPLETE" | "FINALIZED"
+  status    String   @default("DRAFT")
+
+  // Facility profile, serialized as a JSON string (facility name/address,
+  // food categories, regulatory scope, responsible individual, etc.)
+  facilityProfile String?
+
+  isPaid    Boolean  @default(false) // one-time fee paid to unlock export/full features
+  paidAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // When this record should be purged if no active storage subscription exists.
+  retentionExpiresAt DateTime?
+
+  products           Product[]
+  sops               Sop[]
+  exports            PlanExport[]
+  recallContacts     RecallContact[]
+  mockRecallRecords  MockRecallRecord[]
+
+  @@index([userId])
+}
+
+// A single product made at this facility. Most operations make more than
+// one product (or one product in several formats), and each needs its own
+// process flow and hazard analysis — GMPs, recall, and the facility profile
+// stay shared across all products on the Plan.
+model Product {
+  id     String @id @default(cuid())
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  name                String
+  productDescription  String? // ingredients, form, processing method
+  intendedUse         String? // e.g. ready-to-eat, requires cooking
+  intendedConsumer    String? // general public or a vulnerable population
+  packagingType       String?
+  shelfLifeAndStorage String?
+  order               Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  processSteps ProcessStep[]
+
+  @@index([planId])
+}
+
+// A single step in a product's process flow (e.g. "Receiving", "Cooking",
+// "Cooling", "Packaging"). Hazard analysis and CCP determination hang off
+// each step. Scoped to one Product, since different products typically
+// have different process flows.
+model ProcessStep {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  order       Int
+  name        String
+  description String?
+
+  hazards Hazard[]
+
+  @@index([productId])
+}
+
+// One identified hazard at a process step, plus the CCP decision-tree outcome
+// for that hazard.
+model Hazard {
+  id            String     @id @default(cuid())
+  processStepId String
+  processStep   ProcessStep @relation(fields: [processStepId], references: [id], onDelete: Cascade)
+
+  // Allowed values: "BIOLOGICAL" | "CHEMICAL" | "PHYSICAL" | "RADIOLOGICAL"
+  type            String
+  description     String
+  isLikelyToOccur Boolean   @default(false)
+  // Allowed values: "LOW" | "MODERATE" | "HIGH" | "SEVERE"
+  severity        String    @default("MODERATE")
+  // Allowed values: "RARE" | "POSSIBLE" | "LIKELY" | "ALMOST_CERTAIN"
+  likelihood      String    @default("POSSIBLE")
+  justification   String?   // why this hazard requires (or does not require) a preventive control
+
+  requiresPreventiveControl Boolean @default(false)
+
+  // CCP decision-tree answers (Q1-Q4, Codex/CFIA style) and the resulting status
+  ccpQ1DoControlMeasuresExist   Boolean?
+  ccpQ2IsStepSpecificallyToControl Boolean?
+  ccpQ3CouldContaminationExceedLimit Boolean?
+  ccpQ4WillLaterStepEliminate  Boolean?
+  // Allowed values: "NOT_EVALUATED" | "NOT_A_CCP" | "CCP" | "PRW"
+  // (PRW = "process preventive control", i.e. a preventive control that
+  // isn't a classic CCP)
+  ccpStatus                     String @default("NOT_EVALUATED")
+
+  // Preventive control details, filled once a control point is designated
+  criticalLimit      String?
+  monitoringProcedure String?
+  monitoringFrequency String?
+  correctionAction    String?
+  verificationProcedure String?
+  recordkeepingProcedure String?
+  responsibleParty    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([processStepId])
+}
+
+// Generated GMP/prerequisite-program and food-safety SOP documents
+// (personnel hygiene, sanitation, recall, allergen control, supplier
+// verification, etc.), templated then customized with facility-specific
+// data. Which wizard step a template appears under (GMP vs SOPs) is
+// determined by its `category` in src/lib/sopTemplates.ts, not stored here.
+model Sop {
+  id      String  @id @default(cuid())
+  planId  String
+  plan    Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  templateKey String   // e.g. "sanitation", "recall", "personnel_hygiene", "pest_control"
+  title       String
+  content     String   // rendered SOP text (markdown)
+  isCustom    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planId])
+}
+
+// A named member of the recall team, with role and contact info, used to
+// auto-populate the Recall Plan document.
+model RecallContact {
+  id      String  @id @default(cuid())
+  planId  String
+  plan    Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  role  String // e.g. "Recall Coordinator", "Alternate Recall Coordinator", "Quality Lead" — free text, suggestions provided in the UI
+  name  String
+  phone String?
+  email String?
+  order Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planId])
+}
+
+// A logged mock recall exercise. CFIA/SFCR expects these to be performed
+// (and evidenced) at least annually.
+model MockRecallRecord {
+  id     String @id @default(cuid())
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  performedAt    DateTime
+  performedBy    String?
+  percentTraced  String? // free text, e.g. "98%" — kept as text to avoid forcing a numeric format
+  resultsSummary String?
+
+  createdAt DateTime @default(now())
+
+  @@index([planId])
+}
+
+// Record of generated export files (for audit trail / re-download), stored
+// either inline (small dev use) or as a pointer to external object storage
+// in production.
+model PlanExport {
+  id        String   @id @default(cuid())
+  planId    String
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  format    String   // "docx" | "pdf"
+  createdAt DateTime @default(now())
+
+  @@index([planId])
+}

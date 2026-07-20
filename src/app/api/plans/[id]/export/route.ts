@@ -1,0 +1,41 @@
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/session";
+import { db } from "@/lib/db";
+import { buildPlanDocx } from "@/lib/exportDocx";
+import { canExportPlan } from "@/lib/entitlements";
+
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const plan = await db.plan.findFirst({
+    where: { id: params.id, userId: user.id },
+    include: {
+      products: {
+        include: { processSteps: { include: { hazards: true }, orderBy: { order: "asc" } } },
+        orderBy: { order: "asc" },
+      },
+      sops: true,
+      recallContacts: { orderBy: { order: "asc" } },
+      mockRecallRecords: { orderBy: { performedAt: "desc" } },
+    },
+  });
+  if (!plan) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (!canExportPlan(plan)) {
+    return NextResponse.json(
+      { error: "This plan hasn't been unlocked yet. Unlock it from the pricing page to export a docx." },
+      { status: 402 }
+    );
+  }
+
+  const buffer = await buildPlanDocx(plan);
+  await db.planExport.create({ data: { planId: plan.id, format: "docx" } });
+
+  return new NextResponse(buffer, {
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "Content-Disposition": `attachment; filename="${plan.name.replace(/[^a-z0-9-_ ]/gi, "").trim() || "preventive-control-plan"}.docx"`,
+    },
+  });
+}

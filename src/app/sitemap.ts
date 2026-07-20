@@ -1,0 +1,15 @@
+import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/seo";
+
+// Only the truly public marketing/auth pages belong here — everything
+// under /dashboard and /plans is private, per-user data and is excluded
+// via robots.ts instead.
+export default function sitemap(): MetadataRoute.Sitemap {
+  const now = new Date();
+  return [
+    { url: `${SITE_URL}/`, lastModified: now, changeFrequency: "monthly", priority: 1 },
+    { url: `${SITE_URL}/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${SITE_URL}/login`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE_URL}/register`, lastModified: now, changeFrequency: "yearly", priority: 0.5 },
+  ];
+}
