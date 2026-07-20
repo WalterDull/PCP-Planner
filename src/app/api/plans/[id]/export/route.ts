@@ -32,7 +32,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const buffer = await buildPlanDocx(plan);
   await db.planExport.create({ data: { planId: plan.id, format: "docx" } });
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "Content-Disposition": `attachment; filename="${plan.name.replace(/[^a-z0-9-_ ]/gi, "").trim() || "preventive-control-plan"}.docx"`,
