@@ -5,14 +5,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // FTC International brand palette — orange mark + dark navy wordmark.
         brand: {
-          50: "#f0f9f4",
-          100: "#dcf1e3",
-          500: "#2f8f5b",
-          600: "#237a49",
-          700: "#1c5f39",
-          900: "#123c25",
+          50: "#fff5ee",
+          100: "#ffe6d5",
+          500: "#f26a21",
+          600: "#e35511",
+          700: "#b8440e",
+          900: "#7a2d0a",
         },
+        // Navy from the FTC wordmark, for headings/secondary accents.
+        ftcnavy: "#1c1c38",
       },
     },
   },

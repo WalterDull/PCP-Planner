@@ -16,18 +16,37 @@ export default function OpengraphImage() {
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          background: "linear-gradient(135deg, #123c25 0%, #1c5f39 45%, #237a49 100%)",
+          background: "linear-gradient(135deg, #1c1c38 0%, #2a2a52 55%, #3a2a1a 100%)",
           color: "white",
           fontFamily: "sans-serif",
           padding: "80px",
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: 28, letterSpacing: 4, textTransform: "uppercase", opacity: 0.85 }}>
-          FTC International
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <div
+            style={{
+              width: 84,
+              height: 84,
+              borderRadius: 999,
+              background: "#f26a21",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 34,
+              fontWeight: 800,
+              letterSpacing: 1,
+            }}
+          >
+            FTC
+          </div>
+          <div style={{ fontSize: 30, letterSpacing: 3, textTransform: "uppercase", opacity: 0.9 }}>
+            FTC International
+          </div>
         </div>
-        <div style={{ fontSize: 84, fontWeight: 700, marginTop: 24, lineHeight: 1.1 }}>PCP Planner</div>
-        <div style={{ fontSize: 34, marginTop: 28, maxWidth: 900, opacity: 0.92 }}>
+        <div style={{ fontSize: 84, fontWeight: 700, marginTop: 28, lineHeight: 1.1 }}>PCP Planner</div>
+        <div style={{ fontSize: 34, marginTop: 24, maxWidth: 900, opacity: 0.92 }}>
           Build a CFIA-aligned Preventive Control Plan, one guided step at a time
         </div>
       </div>

@@ -4,10 +4,9 @@ export const runtime = "edge";
 export const size = { width: 64, height: 64 };
 export const contentType = "image/png";
 
-// Placeholder mark until FTC International supplies a real logo — swap this
-// file out for a static public/favicon.ico + icon.png pair (Next.js's file
-// convention picks those up automatically with no code change) once one
-// exists.
+// FTC International favicon — the orange circle mark with "FTC". To use an
+// official asset instead, drop a static public/favicon.ico (Next.js's file
+// convention picks it up automatically) and delete this file.
 export default function Icon() {
   return new ImageResponse(
     (
@@ -18,15 +17,16 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#1c5f39",
+          background: "#f26a21",
           color: "white",
-          fontSize: 40,
-          fontWeight: 700,
+          fontSize: 24,
+          fontWeight: 800,
+          letterSpacing: 0.5,
           fontFamily: "sans-serif",
-          borderRadius: 12,
+          borderRadius: 999,
         }}
       >
-        P
+        FTC
       </div>
     ),
     { ...size }

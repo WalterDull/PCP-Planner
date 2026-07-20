@@ -476,6 +476,111 @@ Current job descriptions for all food-safety-relevant roles are kept on
 file and reviewed at least annually or upon role change.
 `,
   },
+  {
+    key: "pre_operational_inspection",
+    title: "Pre-Operational Inspection SOP",
+    category: "gmp",
+    render: ({ facility: f, products }) => `# Pre-Operational Inspection SOP
+
+**Facility:** ${fallback(f.facilityName, "[Facility Name]")}
+**Responsible individual:** ${fallback(f.responsibleIndividual, "[Name / Title]")}
+
+## Purpose
+Confirms that the facility, equipment, and food-contact surfaces are clean,
+sanitary, and in good repair before production of ${productListText(products, f)}
+begins each day, so that pre-existing contamination or equipment defects are
+caught before they can affect product.
+
+## Scope
+Applies to all production lines, food-contact surfaces, utensils, overhead
+structures, drains, and adjacent non-food-contact areas prior to the start of
+each shift or production run.
+
+## Procedure
+Before production starts, a trained employee inspects and confirms:
+1. Food-contact surfaces are visibly clean, sanitized, and dry (cross-checks
+   the Sanitation SOP was completed).
+2. No standing water, condensation over exposed product, or drain backup.
+3. Equipment is intact — no missing bolts, worn gaskets, flaking paint, tape,
+   or loose hardware that could become a physical hazard.
+4. No evidence of pest activity (droppings, gnaw marks, insects).
+5. Utensils, hoses, and small parts are stored off the floor and protected.
+6. Hand-wash and sanitizing stations are stocked and functional.
+7. Only approved, correctly labeled chemicals are present; no chemicals stored
+   over or near exposed product or packaging.
+
+## Monitoring
+The inspection is documented on a pre-operational checklist, signed and dated,
+before the "go" decision to start production.
+
+## Corrective Action
+Any deficiency is corrected and re-inspected before production begins. If a
+deficiency is found that could have affected product from a prior run, that
+product is placed on hold and investigated.
+
+## Verification
+${fallback(f.responsibleIndividual, "[Name / Title]")} reviews completed
+pre-operational checklists at least weekly.
+
+## Recordkeeping
+Pre-operational inspection checklists are retained for [retention period] and
+available for CFIA review.
+`,
+  },
+  {
+    key: "preventive_maintenance",
+    title: "Preventive Maintenance SOP",
+    category: "gmp",
+    render: ({ facility: f }) => `# Preventive Maintenance SOP
+
+**Facility:** ${fallback(f.facilityName, "[Facility Name]")}
+**Responsible individual:** ${fallback(f.responsibleIndividual, "[Name / Title]")}
+
+## Purpose
+Keeps equipment operating as intended so that maintenance-related hazards
+(metal fragments from worn parts, temperature-control failures, calibration
+drift on monitoring instruments) are prevented rather than discovered after
+they affect product.
+
+## Scope
+Applies to all production and monitoring equipment whose failure could affect
+food safety — including thermometers/thermographs, metal detectors/X-ray,
+scales, cutters/blades, seals and gaskets, refrigeration, and any equipment
+associated with a CCP or preventive control.
+
+## Program Elements
+1. **Equipment list:** Maintain a list of food-safety-relevant equipment and
+   its required maintenance tasks and frequencies (per manufacturer
+   recommendations and facility experience).
+2. **Scheduled maintenance:** Perform and log preventive maintenance on
+   schedule (e.g., blade/gasket inspection, lubrication with food-grade
+   lubricants only, belt and fastener checks).
+3. **Calibration:** Calibrate/verify monitoring instruments used for critical
+   limits (thermometers, metal detectors, scales, pH/Aw meters) at a defined
+   frequency and after any repair, against a known standard.
+4. **Repairs:** Temporary repairs (tape, wire, cardboard) are not used on
+   food-contact equipment; after any repair, the area is cleaned/sanitized and
+   inspected before returning to production.
+
+## Monitoring
+Completed maintenance and calibration are logged with equipment ID, task,
+date, result, and technician.
+
+## Corrective Action
+If a monitoring instrument is found out of calibration, product produced since
+the last good check is evaluated for the affected parameter and held if
+necessary. Equipment that fails could-affect-safety maintenance is removed
+from service until repaired and verified.
+
+## Verification
+${fallback(f.responsibleIndividual, "[Name / Title]")} reviews the maintenance
+and calibration logs at least monthly and confirms scheduled tasks are current.
+
+## Recordkeeping
+Maintenance schedules, work orders, and calibration records are retained for
+[retention period].
+`,
+  },
 ];
 
 // --- Food-safety (hazard-specific) templates ------------------------------
@@ -633,6 +738,226 @@ plan.
 ## Verification
 ${fallback(f.responsibleIndividual, "[Name / Title]")} reviews allergen control
 records at least monthly.
+`,
+  },
+  {
+    key: "raw_material_inspection",
+    title: "Raw Material / Incoming Material Inspection SOP",
+    category: "food_safety",
+    render: ({ facility: f, products }) => `# Raw Material / Incoming Material Inspection SOP
+
+**Facility:** ${fallback(f.facilityName, "[Facility Name]")}
+**Responsible individual:** ${fallback(f.responsibleIndividual, "[Name / Title]")}
+
+## Purpose
+Ensures incoming ingredients, packaging, and other materials used to produce
+${productListText(products, f)} are inspected on receipt for contamination,
+damage, temperature abuse, and correct identity before acceptance — controlling
+hazards at the receiving step.
+
+## Scope
+Applies to every shipment of raw materials, ingredients, processing aids, and
+food-contact packaging received at the facility.
+
+## Procedure
+On receipt, a trained employee verifies and records:
+1. **Supplier:** Material is from an approved supplier (see Vendor & Supplier
+   Qualification Program).
+2. **Documentation:** Shipping documents, and where required a Certificate of
+   Analysis (see Vendor Guarantee & CoA SOP), match the material and lot.
+3. **Vehicle/condition:** Transport vehicle is clean, free of pests, odours,
+   and non-food contaminants; refrigerated/frozen loads are at the required
+   temperature (measured and recorded).
+4. **Integrity:** Packaging is intact — no tears, leaks, infestation, rust,
+   glass, swelling, or signs of tampering.
+5. **Identity & allergens:** Product name, spec, and allergen declaration
+   match the purchase order and the facility's ingredient specification.
+6. **Coding:** Lot codes and best-before/expiry dates are present and within
+   acceptable range.
+
+## Monitoring
+Each receipt is documented on a receiving log/checklist with date, supplier,
+lot, temperature (where applicable), inspector, and accept/reject decision.
+
+## Corrective Action
+Material that fails any check is rejected or placed on hold and clearly
+identified, segregated, and dispositioned (returned, destroyed, or released
+only after the deviation is resolved). Repeated failures from a supplier
+trigger review under the Vendor & Supplier Qualification Program.
+
+## Verification
+${fallback(f.responsibleIndividual, "[Name / Title]")} reviews receiving records
+at least [weekly/monthly].
+
+## Recordkeeping
+Receiving logs, temperature records, and rejection records are retained for
+[retention period].
+`,
+  },
+  {
+    key: "label_inspection",
+    title: "Label Inspection SOP",
+    category: "food_safety",
+    render: ({ facility: f, products }) => `# Label Inspection SOP
+
+**Facility:** ${fallback(f.facilityName, "[Facility Name]")}
+**Responsible individual:** ${fallback(f.responsibleIndividual, "[Name / Title]")}
+
+## Purpose
+Ensures the correct, accurate label is applied to every unit of
+${productListText(products, f)}, with particular attention to allergen
+declaration and label accuracy, to prevent undeclared allergens and
+misbranding — a leading cause of food recalls.
+
+## Scope
+Applies to all consumer and shipping labels at each production run and at any
+label changeover.
+
+## Procedure
+1. **Correct label:** Before a run starts, verify the label pulled matches the
+   product and formulation scheduled (product name, net quantity, format).
+2. **Allergen accuracy:** Confirm the label's allergen ("Contains" / "May
+   contain") statement matches the actual formulation and the ingredient
+   allergen records; confirm all priority allergens, gluten sources, and
+   added sulphites present are declared.
+3. **Ingredient list:** Confirm the ingredient list matches the current
+   approved formulation, in descending order by weight.
+4. **Bilingual & mandatory elements:** Confirm required bilingual
+   (English/French) text and other mandatory elements (nutrition facts,
+   identity, net quantity, dealer name/address, lot/date coding, storage
+   instructions where applicable) are present and legible.
+5. **Lot/date coding:** Confirm lot code and best-before/expiry are correctly
+   applied and legible.
+6. **First-article check:** Inspect the first labeled unit off the line, and
+   at a defined frequency thereafter, plus at every label roll/changeover.
+
+## Monitoring
+Label checks (first-article, periodic, and changeover) are documented with the
+run/lot, label version, checker, and result.
+
+## Corrective Action
+On any mismatch, the line is stopped, affected product is placed on hold, the
+correct label is confirmed, and mislabeled product is relabeled or destroyed.
+If mislabeled product may have shipped, the Customer Complaints/Recall
+procedures are triggered.
+
+## Verification
+${fallback(f.responsibleIndividual, "[Name / Title]")} reviews label inspection
+records at least monthly and reconciles label inventory to production.
+
+## Recordkeeping
+Label inspection records and retained label specimens are kept for
+[retention period].
+`,
+  },
+  {
+    key: "vendor_guarantee_coa",
+    title: "Vendor Guarantee & Certificate of Analysis (CoA) SOP",
+    category: "food_safety",
+    render: ({ facility: f }) => `# Vendor Guarantee & Certificate of Analysis (CoA) SOP
+
+**Facility:** ${fallback(f.facilityName, "[Facility Name]")}
+**Responsible individual:** ${fallback(f.responsibleIndividual, "[Name / Title]")}
+
+## Purpose
+Uses supplier guarantees (letters of guarantee/continuing guarantee) and
+Certificates of Analysis to provide documented assurance that incoming
+materials are free from contamination and meet specification — supporting the
+hazards this facility relies on suppliers to control.
+
+## Scope
+Applies to ingredients and materials where a supplier guarantee and/or CoA is
+the basis for accepting the lot (e.g., allergen status, pathogen testing,
+mycotoxin/heavy-metal limits, potency/identity).
+
+## Letter of Guarantee
+1. Obtain a signed letter of (continuing) guarantee from each supplier stating
+   that materials supplied comply with applicable Canadian food law and the
+   facility's specifications, and that the supplier will notify the facility of
+   any change to formulation, allergen status, or sourcing.
+2. Keep current guarantees on file for every approved supplier; re-confirm at
+   least annually.
+
+## Certificate of Analysis (CoA)
+1. Define which materials require a CoA and which parameters must appear
+   (e.g., pathogen results, allergen statement, moisture/Aw, potency,
+   contaminant limits).
+2. On receipt, match each CoA to the specific lot received, and verify each
+   reported result meets specification before the lot is released to
+   production.
+3. Where CoAs are relied on in place of incoming testing, periodically verify
+   supplier CoA reliability (e.g., independent verification testing at a
+   defined frequency).
+
+## Monitoring
+CoA review (lot match + results within spec) and guarantee currency are
+documented at receiving; exceptions are flagged.
+
+## Corrective Action
+A missing CoA, a lot mismatch, or an out-of-spec result results in the lot
+being held pending resolution; unresolved lots are rejected. Recurring CoA
+issues trigger supplier re-evaluation.
+
+## Verification
+${fallback(f.responsibleIndividual, "[Name / Title]")} reviews CoA and guarantee
+records at least [monthly/quarterly].
+
+## Recordkeeping
+Letters of guarantee and CoAs are retained for [retention period] and linked to
+the lots they cover.
+`,
+  },
+  {
+    key: "customer_complaints",
+    title: "Customer Complaint Handling SOP",
+    category: "food_safety",
+    render: ({ facility: f }) => `# Customer Complaint Handling SOP
+
+**Facility:** ${fallback(f.facilityName, "[Facility Name]")}
+**Responsible individual:** ${fallback(f.responsibleIndividual, "[Name / Title]")}
+
+## Purpose
+Ensures food safety and quality complaints are captured, assessed, and acted
+on quickly — and that any complaint indicating a potential health risk triggers
+the facility's Recall Plan.
+
+## Scope
+Applies to all complaints received from consumers, customers, distributors,
+retailers, or regulators regarding ${fallback(f.foodCategories, "[product categories]")}.
+
+## Procedure
+1. **Capture:** Log every complaint with date received, complainant contact,
+   product, lot/date code, nature of the complaint, and any sample/photo.
+2. **Classify:** Assess whether the complaint is:
+   - **Food safety / health risk** (e.g., foreign material, illness,
+     undeclared allergen, spoilage/pathogen indication), or
+   - **Quality only** (e.g., appearance, texture, taste).
+3. **Immediate action for potential health risk:** Notify
+   ${fallback(f.responsibleIndividual, "[Name / Title]")} immediately, place
+   potentially affected lots on hold, and evaluate whether the Recall Plan must
+   be initiated (see Recall Plan). Notify CFIA where required.
+4. **Investigate:** Determine root cause using production, monitoring, and
+   distribution records for the implicated lot.
+5. **Respond:** Acknowledge the complainant and, where appropriate, provide a
+   resolution.
+
+## Monitoring
+Complaints are trended (by type, product, and lot) at least [monthly] to detect
+emerging patterns that may indicate a systemic problem or a developing recall
+situation.
+
+## Corrective Action
+Confirmed food safety complaints drive root-cause corrective action; a trend or
+a confirmed health risk triggers the Recall Plan and, where required,
+notification to CFIA.
+
+## Verification
+${fallback(f.responsibleIndividual, "[Name / Title]")} reviews the complaint log
+and trend analysis at least monthly.
+
+## Recordkeeping
+Complaint records, investigations, and any resulting corrective actions or
+recalls are retained for [retention period].
 `,
   },
   {
