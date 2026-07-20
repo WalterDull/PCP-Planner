@@ -38,6 +38,17 @@ export const COMMON_STEP_NAMES = [
   "Metal Detection/X-ray",
   "Sifting",
   "Dehydration/Drying",
+  "Chopping",
+  "High-Speed Cutting",
+  "Forming",
+  "Filling",
+  "Stuffing",
+  "Deep Frying",
+  "Steaming",
+  "Smoking",
+  "Curing",
+  "Extraction",
+  "Freezer Storage",
   "Allergen Changeover/Rework",
   "Shipping",
 ] as const;
@@ -92,6 +103,47 @@ const LIBRARY: Record<string, HazardSuggestion[]> = {
   ],
   "Dehydration/Drying": [
     { type: "BIOLOGICAL", description: "Pathogen survival due to insufficient water activity (Aw) reduction" },
+  ],
+  "Chopping": [
+    { type: "BIOLOGICAL", description: "Cross-contamination from equipment or personnel" },
+    { type: "PHYSICAL", description: "Metal fragments from blades or worn equipment" },
+  ],
+  "High-Speed Cutting": [
+    { type: "PHYSICAL", description: "Metal fragments from blade wear or breakage at high speed" },
+    { type: "BIOLOGICAL", description: "Cross-contamination from equipment or personnel" },
+  ],
+  "Forming": [
+    { type: "PHYSICAL", description: "Foreign material introduced from forming equipment or moulds" },
+  ],
+  "Filling": [
+    { type: "BIOLOGICAL", description: "Post-process contamination from filler or environment" },
+    { type: "PHYSICAL", description: "Foreign material from filling equipment" },
+  ],
+  "Stuffing": [
+    { type: "BIOLOGICAL", description: "Cross-contamination from casings, equipment, or personnel" },
+    { type: "PHYSICAL", description: "Casing or equipment fragments in product" },
+  ],
+  "Deep Frying": [
+    { type: "BIOLOGICAL", description: "Survival of pathogens due to insufficient oil temperature or time" },
+    { type: "CHEMICAL", description: "Acrylamide formation / oil breakdown products from over-heated or degraded oil" },
+  ],
+  "Steaming": [
+    { type: "BIOLOGICAL", description: "Survival of pathogens due to insufficient steam time/temperature" },
+  ],
+  "Smoking": [
+    { type: "BIOLOGICAL", description: "Survival or growth of pathogens (e.g. C. botulinum, L. monocytogenes) due to inadequate time/temperature or Aw" },
+    { type: "CHEMICAL", description: "Polycyclic aromatic hydrocarbon (PAH) deposition from smoke" },
+  ],
+  "Curing": [
+    { type: "BIOLOGICAL", description: "Growth or toxin formation by C. botulinum due to inadequate curing salt or process control" },
+    { type: "CHEMICAL", description: "Over-application of nitrite/nitrate exceeding regulated limits" },
+  ],
+  "Extraction": [
+    { type: "CHEMICAL", description: "Residual extraction solvent above acceptable limits" },
+    { type: "BIOLOGICAL", description: "Contamination from extraction equipment or process water" },
+  ],
+  "Freezer Storage": [
+    { type: "BIOLOGICAL", description: "Pathogen survival/growth from inadequate freezer temperature control" },
   ],
   "Allergen Changeover/Rework": [
     { type: "CHEMICAL", description: "Cross-contact with an undeclared allergen from inadequate changeover cleaning or rework handling" },

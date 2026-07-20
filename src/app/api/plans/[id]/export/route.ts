@@ -32,6 +32,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const buffer = await buildPlanDocx(plan);
   await db.planExport.create({ data: { planId: plan.id, format: "docx" } });
 
+  // NextResponse's BodyInit type doesn't accept Node's Buffer directly (a
+  // mismatch between Buffer<ArrayBufferLike> and the DOM lib's expected
+  // ArrayBuffer types) — wrapping it in a plain Uint8Array satisfies the
+  // type checker and produces identical bytes on the wire.
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
