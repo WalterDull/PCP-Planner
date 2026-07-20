@@ -961,6 +961,248 @@ recalls are retained for [retention period].
 `,
   },
   {
+    key: "receiving",
+    title: "Receiving SOP (with Receiving Log)",
+    category: "food_safety",
+    render: ({ facility: f }) => `# Receiving SOP
+
+**Facility:** ${fallback(f.facilityName, "[Facility Name]")}
+**Responsible individual:** ${fallback(f.responsibleIndividual, "[Name / Title]")}
+
+## Purpose
+Establishes how incoming raw materials, ingredients, and packaging are
+received, inspected, and recorded — including capturing each material's
+supplier lot code and assigning an internal lot code so that traceability
+begins at receiving (see the Traceability & Lot Coding SOP).
+
+## Procedure
+1. Confirm the material is from an approved supplier and matches the purchase
+   order.
+2. Inspect condition, temperature (for refrigerated/frozen loads), packaging
+   integrity, and coding per the Raw Material Inspection SOP.
+3. Record the **supplier lot code** exactly as it appears on the material,
+   and assign an **internal (in-house) lot code** used to track that material
+   through production.
+4. Accept, reject, or hold the shipment and record the decision.
+5. File the receiving log entry so it can be linked to the batch records that
+   later consume the material.
+
+## Receiving Log
+Record the following for every shipment received:
+
+| Date received | Supplier | Material / ingredient | Supplier lot code | Internal lot code | Qty | Temp (if applicable) | Condition | Accept/Reject | Received by |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|  |  |  |  |  |  |  |  |  |  |
+|  |  |  |  |  |  |  |  |  |  |
+
+## Monitoring & Corrective Action
+Each shipment is logged at receipt. Non-conforming material is rejected or
+held and dispositioned; the supplier is reviewed if failures recur.
+
+## Recordkeeping
+Receiving logs are retained for [retention period] and are the starting point
+for any trace or recall.
+`,
+  },
+  {
+    key: "shipping",
+    title: "Shipping SOP (with Shipping Log)",
+    category: "food_safety",
+    render: ({ facility: f, products }) => `# Shipping SOP
+
+**Facility:** ${fallback(f.facilityName, "[Facility Name]")}
+**Responsible individual:** ${fallback(f.responsibleIndividual, "[Name / Title]")}
+
+## Purpose
+Ensures finished product (${productListText(products, f)}) is shipped under
+food-safe conditions and that each shipment is recorded with the finished
+product lot code and customer — completing the traceability chain so any lot
+can be traced forward to the customers who received it.
+
+## Procedure
+1. Verify finished product is correctly labeled and within shelf life before
+   loading (see Label Inspection SOP).
+2. Inspect the transport vehicle for cleanliness, pests, odours, and (for
+   temperature-controlled loads) pre-cooling to the required temperature.
+3. Record the **finished product lot code**, quantity, customer/destination,
+   ship date, and carrier for every outbound shipment.
+4. Record load temperature at dispatch where applicable.
+
+## Shipping Log
+Record the following for every outbound shipment:
+
+| Ship date | Customer / destination | Finished product | Finished product lot code | Qty | Carrier | Load temp (if applicable) | Shipped by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+|  |  |  |  |  |  |  |  |
+|  |  |  |  |  |  |  |  |
+
+## Monitoring & Corrective Action
+Each shipment is logged at dispatch. A shipment that fails inspection (unclean
+vehicle, temperature not met) is held until corrected.
+
+## Recordkeeping
+Shipping logs are retained for [retention period] and are used, together with
+the receiving log and batch records, to trace product forward during a recall.
+`,
+  },
+  {
+    key: "traceability",
+    title: "Traceability & Lot Coding SOP (with Batch Record)",
+    category: "food_safety",
+    render: ({ facility: f, products }) => `# Traceability & Lot Coding SOP
+
+**Facility:** ${fallback(f.facilityName, "[Facility Name]")}
+**Responsible individual:** ${fallback(f.responsibleIndividual, "[Name / Title]")}
+
+## Purpose
+Ensures one-up/one-back traceability for ${productListText(products, f)}: every
+finished product lot can be traced **back** to the raw material lots it was made
+from, and **forward** to the customers it was shipped to. This is the backbone
+of an effective recall.
+
+## The Traceability Chain
+1. **Receiving:** Each incoming material's supplier lot code is recorded and an
+   internal lot code is assigned (Receiving SOP / Receiving Log).
+2. **Production:** For each production run, the **batch record** captures which
+   internal raw-material lot codes were used to make which **finished product
+   lot code**.
+3. **Shipping:** Each finished product lot code is recorded against the
+   customer it shipped to (Shipping SOP / Shipping Log).
+
+## Lot Coding
+- Assign a unique finished product lot code to each production run (e.g., a
+  date/line/sequence code). Document the coding convention here so anyone can
+  interpret a code: [describe your lot code format].
+- The finished product lot code appears on the product label and links to the
+  batch record.
+
+## Batch Record
+Complete one batch record per production run:
+
+| Field | Entry |
+| --- | --- |
+| Product | [product name] |
+| Finished product lot code | [assigned lot code] |
+| Production date & line | [date / line] |
+| Raw material lots used (internal lot codes) | [list each ingredient and its internal lot code] |
+| Quantity produced | [units] |
+| Key process checks (e.g., cook temp/time, CCP records) | [reference or values] |
+| Label version / lot verified | [initials] |
+| Completed by | [name / initials] |
+
+Raw material lots consumed in a run:
+
+| Ingredient / material | Supplier lot code | Internal lot code | Quantity used |
+| --- | --- | --- | --- |
+|  |  |  |  |
+|  |  |  |  |
+
+## Verification (Mock Recall)
+Traceability is verified at least annually via a mock recall (see Recall Plan)
+by selecting a finished product lot and confirming it can be traced back to raw
+material lots and forward to customers within a reasonable timeframe.
+
+## Recordkeeping
+Batch records, receiving logs, and shipping logs are retained for [retention
+period] and cross-reference each other by lot code.
+`,
+  },
+  {
+    key: "water_potability",
+    title: "Water Potability & Annual Testing SOP",
+    category: "food_safety",
+    render: ({ facility: f }) => `# Water Potability & Annual Testing SOP
+
+**Facility:** ${fallback(f.facilityName, "[Facility Name]")}
+**Responsible individual:** ${fallback(f.responsibleIndividual, "[Name / Title]")}
+
+## Purpose
+Ensures water (and ice/steam that contacts food or food-contact surfaces) at
+${fallback(f.facilityName, "[Facility Name]")} is potable and does not
+introduce biological or chemical hazards, verified by testing at least
+annually (and per municipal requirements).
+
+## Scope
+Applies to all water used in product, cleaning of food-contact surfaces, hand
+washing, and ice/steam generation.
+
+## Requirements
+1. **Source:** Identify the water source (municipal / private well). Private
+   wells and any non-municipal source require more frequent testing.
+2. **Annual testing (minimum):** Test potable water at least annually for
+   microbiological parameters (e.g., total coliforms and E. coli) and, as
+   applicable, chemical parameters, using an accredited laboratory. Increase
+   frequency for well water or if a result is unsatisfactory.
+3. **Backflow prevention:** Maintain backflow/cross-connection controls so
+   non-potable lines cannot contaminate potable water.
+4. **Ice & steam:** Ice and culinary steam that contact food are made from
+   potable water.
+
+## Testing Log
+Record each water test:
+
+| Sample date | Sample location | Parameter(s) tested | Result | Lab | Pass/Fail | Reviewed by |
+| --- | --- | --- | --- | --- | --- | --- |
+|  |  |  |  |  |  |  |
+|  |  |  |  |  |  |  |
+
+## Corrective Action
+An unsatisfactory result triggers immediate action (e.g., stop using the
+affected water, switch to a potable source, boil-water/flush-and-retest per
+public health guidance) and investigation before the water is used again.
+
+## Recordkeeping
+Laboratory certificates of analysis and the testing log are retained for
+[retention period] and reviewed by ${fallback(f.responsibleIndividual, "[Name / Title]")}.
+`,
+  },
+  {
+    key: "temperature_monitoring",
+    title: "Temperature Monitoring SOP (with Log)",
+    category: "food_safety",
+    render: ({ facility: f }) => `# Temperature Monitoring SOP
+
+**Facility:** ${fallback(f.facilityName, "[Facility Name]")}
+**Responsible individual:** ${fallback(f.responsibleIndividual, "[Name / Title]")}
+
+## Purpose
+Ensures temperature-dependent controls (cold storage, freezing, hot holding,
+cooking, cooling) stay within limits, where applicable to this facility's
+products, so temperature-related hazards are prevented.
+
+## Scope
+Applies to all coolers, freezers, hot-holding units, and process steps where
+temperature is a control (including any CCP with a temperature critical limit).
+
+## Procedure
+1. Identify each unit/step to monitor and its target temperature range.
+2. Check and record temperatures at the defined frequency (e.g., start of
+   shift and every [X] hours), using a calibrated thermometer/data logger
+   (see Preventive Maintenance SOP for calibration).
+3. Sign/initial each reading.
+
+## Temperature Log
+Record each reading:
+
+| Date | Time | Unit / step | Target range | Actual temp | In spec? | Corrective action (if out) | Initials |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+|  |  |  |  |  |  |  |  |
+|  |  |  |  |  |  |  |  |
+
+## Corrective Action
+An out-of-range reading triggers immediate action: assess affected product
+(hold/evaluate), correct the equipment/process, and record what was done. For
+a CCP deviation, follow that CCP's corrective action procedure.
+
+## Verification
+${fallback(f.responsibleIndividual, "[Name / Title]")} reviews temperature logs
+at least [weekly] and confirms corrective actions were completed.
+
+## Recordkeeping
+Temperature logs are retained for [retention period].
+`,
+  },
+  {
     key: "supplier_verification",
     title: "Supply-Chain (Supplier Verification) Program",
     category: "food_safety",

@@ -7,6 +7,7 @@ import {
   TableRow,
   TableCell,
   WidthType,
+  TableLayoutType,
   TextRun,
 } from "docx";
 import type { Plan, Product, ProcessStep, Hazard, Sop, RecallContact, MockRecallRecord } from "@prisma/client";
@@ -26,34 +27,113 @@ const REGULATORY_SCOPE_LABEL: Record<string, string> = {
   OTHER: "Other",
 };
 
-function cell(text: string, opts: { bold?: boolean; width?: number } = {}) {
+// Usable content width on a US-Letter page with 1" margins, in DXA
+// (twentieths of a point; 1440 DXA = 1 inch). Column widths are specified in
+// absolute DXA with a FIXED table layout — this is what stops Word from
+// collapsing columns to one character wide, which happens when cell widths
+// are omitted or given only as percentages under an auto layout.
+const CONTENT_WIDTH_DXA = 9360;
+
+function pctToDxa(pcts: number[]): number[] {
+  return pcts.map((p) => Math.round((CONTENT_WIDTH_DXA * p) / 100));
+}
+
+function cell(text: string, opts: { bold?: boolean; widthDxa?: number } = {}) {
   return new TableCell({
-    width: opts.width ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
+    width: opts.widthDxa ? { size: opts.widthDxa, type: WidthType.DXA } : undefined,
     children: [new Paragraph({ children: [new TextRun({ text, bold: opts.bold })] })],
   });
 }
 
-function headerRow(labels: string[], widths: number[]) {
+function headerRow(labels: string[], widthsDxa: number[]) {
   return new TableRow({
-    children: labels.map((l, i) => cell(l, { bold: true, width: widths[i] })),
+    tableHeader: true,
+    children: labels.map((l, i) => cell(l, { bold: true, widthDxa: widthsDxa[i] })),
   });
 }
 
-function markdownToParagraphs(md: string): Paragraph[] {
-  return md
-    .split("\n")
-    .map((line) => {
-      if (line.startsWith("# ")) {
-        return new Paragraph({ text: line.replace("# ", ""), heading: HeadingLevel.HEADING_1 });
+function dataRow(values: string[], widthsDxa: number[]) {
+  return new TableRow({
+    children: values.map((v, i) => cell(v, { widthDxa: widthsDxa[i] })),
+  });
+}
+
+function makeTable(widthsDxa: number[], rows: TableRow[]): Table {
+  return new Table({
+    rows,
+    columnWidths: widthsDxa,
+    layout: TableLayoutType.FIXED,
+    width: { size: widthsDxa.reduce((a, b) => a + b, 0), type: WidthType.DXA },
+  });
+}
+
+function isTableRow(line: string): boolean {
+  return line.trim().startsWith("|");
+}
+
+function isSeparatorRow(line: string): boolean {
+  const t = line.trim();
+  return /^\|?[\s:|-]*-[\s:|-]*$/.test(t) && t.includes("-");
+}
+
+function parseCells(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((c) => c.trim());
+}
+
+// Renders a template's markdown-ish text into docx blocks, turning pipe
+// tables (| a | b |) into real, properly-sized docx tables and everything
+// else into paragraphs/headings.
+function markdownToBlocks(md: string): (Paragraph | Table)[] {
+  const lines = md.split("\n");
+  const blocks: (Paragraph | Table)[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (isTableRow(line) && i + 1 < lines.length && isSeparatorRow(lines[i + 1])) {
+      const header = parseCells(line);
+      const bodyLines: string[] = [];
+      let j = i + 2;
+      while (j < lines.length && isTableRow(lines[j]) && !isSeparatorRow(lines[j])) {
+        bodyLines.push(lines[j]);
+        j++;
       }
-      if (line.startsWith("## ")) {
-        return new Paragraph({ text: line.replace("## ", ""), heading: HeadingLevel.HEADING_2 });
-      }
-      if (line.trim().length === 0) {
-        return new Paragraph({ text: "" });
-      }
-      return new Paragraph({ text: line });
-    });
+      const ncols = header.length;
+      const widths = pctToDxa(Array.from({ length: ncols }, () => 100 / ncols));
+      const rows = [
+        headerRow(header, widths),
+        ...bodyLines.map((bl) => {
+          const cells = parseCells(bl);
+          while (cells.length < ncols) cells.push("");
+          return dataRow(cells.slice(0, ncols), widths);
+        }),
+      ];
+      blocks.push(makeTable(widths, rows));
+      i = j;
+      continue;
+    }
+
+    if (line.startsWith("# ")) {
+      blocks.push(new Paragraph({ text: line.replace("# ", ""), heading: HeadingLevel.HEADING_1 }));
+    } else if (line.startsWith("## ")) {
+      blocks.push(new Paragraph({ text: line.replace("## ", ""), heading: HeadingLevel.HEADING_2 }));
+    } else if (line.startsWith("### ")) {
+      blocks.push(new Paragraph({ text: line.replace("### ", ""), heading: HeadingLevel.HEADING_3 }));
+    } else if (line.trim().length === 0) {
+      blocks.push(new Paragraph({ text: "" }));
+    } else {
+      blocks.push(new Paragraph({ text: line }));
+    }
+    i++;
+  }
+
+  return blocks;
 }
 
 export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
@@ -106,7 +186,7 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
     children.push(new Paragraph({ text: "No GMP / prerequisite program documents have been generated yet." }));
   } else {
     for (const sop of gmpSops) {
-      children.push(...markdownToParagraphs(sop.content));
+      children.push(...markdownToBlocks(sop.content));
       children.push(new Paragraph({ text: "" }));
     }
   }
@@ -132,27 +212,28 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
         continue;
       }
 
+      const hazardWidths = pctToDxa([12, 26, 8, 12, 20, 22]);
       const rows = [
         headerRow(
           ["Hazard type", "Description", "Sig.?", "CCP status", "Critical limit", "Monitoring"],
-          [12, 26, 8, 12, 20, 22]
+          hazardWidths
         ),
-        ...step.hazards.map(
-          (h) =>
-            new TableRow({
-              children: [
-                cell(h.type),
-                cell(h.description),
-                cell(h.requiresPreventiveControl ? "Yes" : "No"),
-                cell(h.ccpStatus),
-                cell(h.criticalLimit ?? "—"),
-                cell(h.monitoringProcedure ?? "—"),
-              ],
-            })
+        ...step.hazards.map((h) =>
+          dataRow(
+            [
+              h.type,
+              h.description,
+              h.requiresPreventiveControl ? "Yes" : "No",
+              h.ccpStatus,
+              h.criticalLimit ?? "—",
+              h.monitoringProcedure ?? "—",
+            ],
+            hazardWidths
+          )
         ),
       ];
 
-      children.push(new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } }));
+      children.push(makeTable(hazardWidths, rows));
       children.push(new Paragraph({ text: "" }));
     }
   }
@@ -190,16 +271,12 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
   if (plan.recallContacts.length === 0) {
     children.push(new Paragraph({ text: "No recall team members have been assigned yet." }));
   } else {
+    const contactWidths = pctToDxa([25, 25, 20, 30]);
     const rows = [
-      headerRow(["Role", "Name", "Phone", "Email"], [25, 25, 20, 30]),
-      ...plan.recallContacts.map(
-        (c) =>
-          new TableRow({
-            children: [cell(c.role), cell(c.name), cell(c.phone ?? "—"), cell(c.email ?? "—")],
-          })
-      ),
+      headerRow(["Role", "Name", "Phone", "Email"], contactWidths),
+      ...plan.recallContacts.map((c) => dataRow([c.role, c.name, c.phone ?? "—", c.email ?? "—"], contactWidths)),
     ];
-    children.push(new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } }));
+    children.push(makeTable(contactWidths, rows));
   }
   children.push(new Paragraph({ text: "" }));
 
@@ -211,29 +288,30 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
       })
     );
   } else {
+    const mockWidths = pctToDxa([15, 20, 15, 50]);
     const rows = [
-      headerRow(["Date", "Performed by", "% traced", "Results summary"], [15, 20, 15, 50]),
+      headerRow(["Date", "Performed by", "% traced", "Results summary"], mockWidths),
       ...[...plan.mockRecallRecords]
         .sort((a, b) => b.performedAt.getTime() - a.performedAt.getTime())
-        .map(
-          (r) =>
-            new TableRow({
-              children: [
-                cell(r.performedAt.toLocaleDateString("en-CA")),
-                cell(r.performedBy ?? "—"),
-                cell(r.percentTraced ?? "—"),
-                cell(r.resultsSummary ?? "—"),
-              ],
-            })
+        .map((r) =>
+          dataRow(
+            [
+              r.performedAt.toLocaleDateString("en-CA"),
+              r.performedBy ?? "—",
+              r.percentTraced ?? "—",
+              r.resultsSummary ?? "—",
+            ],
+            mockWidths
+          )
         ),
     ];
-    children.push(new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } }));
+    children.push(makeTable(mockWidths, rows));
   }
   children.push(new Paragraph({ text: "" }));
 
   const recallSop = plan.sops.find((s) => s.templateKey === "recall");
   if (recallSop) {
-    children.push(...markdownToParagraphs(recallSop.content));
+    children.push(...markdownToBlocks(recallSop.content));
     children.push(new Paragraph({ text: "" }));
   }
 
@@ -244,7 +322,7 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
     children.push(new Paragraph({ text: "No additional food safety SOPs have been generated yet." }));
   } else {
     for (const sop of foodSafetySops) {
-      children.push(...markdownToParagraphs(sop.content));
+      children.push(...markdownToBlocks(sop.content));
       children.push(new Paragraph({ text: "" }));
     }
   }
