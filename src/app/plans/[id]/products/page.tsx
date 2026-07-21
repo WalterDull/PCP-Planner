@@ -164,8 +164,8 @@ export default function ProductsPage({ params }: { params: { id: string } }) {
         <Link href={`/plans/${params.id}/gmp`} className="text-sm font-medium text-slate-500">
           ← Back
         </Link>
-        <Link href={`/plans/${params.id}/process-flow`} className="text-sm font-medium text-brand-600">
-          Next: Process Flow →
+        <Link href={`/plans/${params.id}/vendors`} className="text-sm font-medium text-brand-600">
+          Next: Vendors →
         </Link>
       </div>
     </div>

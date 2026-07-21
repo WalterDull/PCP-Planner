@@ -90,7 +90,7 @@ export default function PreventiveControlsPage({ params }: { params: { id: strin
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-900">Step 7: Preventive Controls</h1>
+      <h1 className="text-xl font-bold text-slate-900">Step 8: Preventive Controls</h1>
       <p className="mt-1 text-sm text-slate-600">
         For every point your decision tree flagged as a CCP, define exactly how it&apos;s controlled
         day to day: the limit, how you check it, what you do if it fails, and who&apos;s responsible.

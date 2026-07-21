@@ -102,7 +102,7 @@ export default function ReviewExportPage({ params }: { params: { id: string } })
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-900">Step 10: Review & Export</h1>
+      <h1 className="text-xl font-bold text-slate-900">Step 11: Review & Export</h1>
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-lg border border-slate-200 bg-white p-4 text-center shadow-sm">

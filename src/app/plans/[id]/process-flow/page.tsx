@@ -71,7 +71,7 @@ export default function ProcessFlowPage({ params }: { params: { id: string } }) 
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-900">Step 4: Process Flow</h1>
+      <h1 className="text-xl font-bold text-slate-900">Step 5: Process Flow</h1>
       <p className="mt-1 text-sm text-slate-600">
         List every step this product goes through, in order, from receiving raw materials to
         shipping the finished product. You&apos;ll analyze hazards for each step next. Each
@@ -157,7 +157,7 @@ export default function ProcessFlowPage({ params }: { params: { id: string } }) 
       )}
 
       <div className="mt-8 flex items-center justify-between">
-        <Link href={`/plans/${params.id}/products`} className="text-sm font-medium text-slate-500">
+        <Link href={`/plans/${params.id}/vendors`} className="text-sm font-medium text-slate-500">
           ← Back
         </Link>
         <Link href={`/plans/${params.id}/hazard-analysis`} className="text-sm font-medium text-brand-600">

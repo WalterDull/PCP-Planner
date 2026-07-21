@@ -125,7 +125,7 @@ export default function RecallPage({ params }: { params: { id: string } }) {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-900">Step 8: Recall Plan</h1>
+      <h1 className="text-xl font-bold text-slate-900">Step 9: Recall Plan</h1>
       <p className="mt-1 text-sm text-slate-600">
         Assign roles and contact information for the people who would carry out a recall, and log
         your mock recalls — CFIA expects a mock recall to be performed and documented at least
