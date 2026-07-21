@@ -31,29 +31,117 @@ export type DecisionResult =
   | { status: "PRW"; reasonKey: string; reason: string; nextQuestion: null }
   | { status: "NOT_EVALUATED"; reasonKey: null; reason: null; nextQuestion: keyof DecisionTreeAnswers };
 
-export const QUESTION_TEXT: Record<keyof DecisionTreeAnswers, { short: string; help: string }> = {
+export interface QuestionGuidance {
+  /** The formal question, as asked in the Codex/CFIA tree. */
+  short: string;
+  /** Plain-language restatement — "what you're really being asked". */
+  plain: string;
+  /** Short inline hint shown under the question without expanding anything. */
+  help: string;
+  /** How to actually decide, in practice. */
+  howToDecide: string;
+  /** A concrete worked example of a "Yes" answer. */
+  yesExample: string;
+  /** A concrete worked example of a "No" answer. */
+  noExample: string;
+  /** The common mistake / clarification people most often get wrong here. */
+  watchOut: string;
+  /** What answering each way does to the outcome. */
+  consequence: string;
+}
+
+export const QUESTION_TEXT: Record<keyof DecisionTreeAnswers, QuestionGuidance> = {
   q1DoControlMeasuresExist: {
-    short: "Do control measures exist for this hazard at this step or any later step?",
-    help:
-      "Think about whether anything in your process — at this step or downstream — is capable of preventing, eliminating, or reducing this hazard to an acceptable level. If no control measure exists anywhere, you may need to change the process, product, or method rather than proceed.",
+    short: "Do control measures exist for this hazard — at this step, or anywhere later in the process?",
+    plain: "Is there anything, anywhere in your process, capable of controlling this hazard?",
+    help: "Look at this step and every step after it — not just this one.",
+    howToDecide:
+      "A control measure is any action or activity that can prevent the hazard, eliminate it, or reduce it to an acceptable level. That includes process steps (a cook, a metal detector, a sifter, a filter) and preventive controls that live in your prerequisite programs (sanitation, allergen changeover, supplier guarantees). If any of those apply to this hazard, the answer is Yes.",
+    yesExample:
+      "Yes — Salmonella could be present on incoming raw poultry, and a later cook step validated to reach 74°C would destroy it.",
+    noExample:
+      "No — glass fragments could enter at this step, and nothing anywhere downstream (no inspection, filtration, or detection) would remove them.",
+    watchOut:
+      "If you answer No, don't just move on. Ask the follow-up CFIA expects: is control at this step necessary for food safety? If it is, you have a significant hazard with no control — you must modify the step, the process, or the product to introduce one. That's a process redesign, not simply a 'not a CCP' result.",
+    consequence:
+      "Yes → continue to Q2.  No → not a CCP as-is, and you likely need to change the process to control this hazard.",
   },
   q2IsStepSpecificallyToControl: {
-    short: "Is this step specifically designed to eliminate the hazard or reduce it to an acceptable level?",
-    help:
-      "Example: a cook step designed to achieve a specific internal temperature is specifically intended to control a biological hazard. A generic mixing step usually is not.",
+    short: "Is this step specifically designed to eliminate the hazard, or reduce it to an acceptable level?",
+    plain: "Was this step put into the process on purpose to deal with this specific hazard?",
+    help: "Applies to processing steps only — for incoming materials, treat as not applicable (answer No) and continue to Q3.",
+    howToDecide:
+      "'Specifically designed' means the step exists — at least partly — to control this hazard, and you can set a measurable limit for it. Cooking, pasteurizing, metal detection, sifting, and acidification usually qualify. Mixing, receiving, storage, and packaging usually do not, even though a hazard may be present at those steps.",
+    yesExample:
+      "Yes — a pasteurizer designed to hold product at 72°C for 15 seconds specifically to destroy vegetative pathogens.",
+    noExample:
+      "No — a mixing step where pathogens may be present, but nothing about mixing is intended to reduce them.",
+    watchOut:
+      "Two things trip people up here. (1) CFIA is explicit that this question applies to PROCESSING steps only — for incoming materials/receiving, it is 'not applicable', so answer No and continue to Q3. (2) If an SOP or prerequisite program is what actually reduces the hazard, the answer is No. The question asks whether the PROCESSING STEP ITSELF is designed to control the hazard — not whether some procedure applied around that step controls it. A step that relies on an SOP is not a step designed to control the hazard. Also note that answering Yes ends the tree immediately at CCP, so only answer Yes if this is genuinely the best step at which to control the hazard.",
+    consequence: "Yes → this step is a CCP (tree ends).  No → continue to Q3.",
   },
   q3CouldContaminationExceedLimit: {
-    short:
-      "Could contamination with this hazard occur at, or increase to, an unacceptable level at this step?",
-    help:
-      "Consider the realistic likelihood the hazard is introduced or grows past a safe level here — based on your facility's history, the nature of the ingredient/process, and industry knowledge.",
+    short: "Could contamination with this hazard occur at, or increase to, an unacceptable level at this step?",
+    plain: "If your controls here failed, could this hazard reach a dangerous level at this step?",
+    help: "Answer this assuming the control measure fails — that's the point of the question.",
+    howToDecide:
+      "CFIA's framing is the key: this asks about contamination that exists, occurs, or increases at this step IF THE CONTROL MEASURE WERE TO FAIL. Base your answer on the product, the process, your facility's history (complaints, recalls, deviations, environmental results) and industry data — not on the assumption that everything works as intended.",
+    yesExample:
+      "Yes — during cooling, if the cooling rate slipped, C. perfringens spores could germinate and multiply past a safe level.",
+    noExample:
+      "No — product is already sealed and held frozen at this step; there is no realistic route for contamination to enter or for the hazard to grow.",
+    watchOut:
+      "Don't answer No just because your controls normally work — the question presumes they didn't. CFIA's own rule of thumb applies here: if you're in doubt about how to answer, assume the worst case until you have evidence that says otherwise. When unsure, answer Yes and let Q4 resolve it.",
+    consequence: "Yes → continue to Q4.  No → not a CCP at this step.",
   },
   q4WillLaterStepEliminate: {
-    short: "Will a later step in the process eliminate the hazard or reduce it to an acceptable level?",
-    help:
-      "If a downstream step (e.g., a kill step, or a validated allergen cleanout) will control this hazard, this step itself may not need to be the control point.",
+    short: "Will a later step eliminate this hazard, or reduce it to an acceptable level?",
+    plain: "Does something downstream actually fix this problem?",
+    help: "Only count a later step you could genuinely validate and monitor.",
+    howToDecide:
+      "Look forward through the remaining steps for a real kill step or reduction step for this specific hazard — one with a critical limit you could validate, monitor, and record. A vague 'it probably gets handled later' does not count.",
+    yesExample:
+      "Yes — pathogens may be present at the forming step, but a later validated cook step destroys them.",
+    noExample:
+      "No — this is the final metal-detection point before packaging; nothing after it would remove a metal fragment.",
+    watchOut:
+      "If you answer Yes, this step is not the CCP — but you are now relying on that later step. Make sure it is actually evaluated through this tree and designated as a CCP with its own critical limit. The most common failure here is a hazard that quietly disappears because every step points to the next one.",
+    consequence: "Yes → not a CCP at this step (the later step should be).  No → this step is a CCP.",
   },
 };
+
+/** Cross-cutting principles worth reading before working through the tree. */
+export const DECISION_TREE_PRINCIPLES: { title: string; body: string }[] = [
+  {
+    title: "Work one hazard, at one step, at a time",
+    body: "The tree is applied separately to every significant hazard at every process step. The same hazard can be a CCP at one step and not at another — that's expected, not a contradiction.",
+  },
+  {
+    title: "When in doubt, assume the worst",
+    body: "This is CFIA's explicit instruction. If you can't decide how to answer a question, assume the worst-case situation until you have evidence that says otherwise. It's safer to carry a hazard further down the tree than to dismiss it early.",
+  },
+  {
+    title: "Not everything should be a CCP",
+    body: "Hazards adequately controlled by prerequisite programs — sanitation, personal hygiene, pest control, allergen segregation, supplier guarantees — are controlled there, not as CCPs. Designating unnecessary CCPs dilutes attention from the points that genuinely keep food safe, and CFIA specifically warns against it.",
+  },
+  {
+    title: "An SOP controlling the hazard does not make the step 'designed to control it'",
+    body:
+      "This is the most common Q2 mistake. If a hazard at a step is reduced by an SOP or prerequisite program (a sanitation procedure, an inspection procedure, a hygiene rule), the processing step itself was not designed to control that hazard — the SOP is doing the work, and the step merely relies on it. Answer No to Q2. The better question is whether that hazard should have entered the tree at all: if the prerequisite program adequately controls it, handle it there and record the controlling SOP, rather than designating a CCP. Reserve CCP status for hazards where a measurable limit at the step itself is what keeps the food safe.",
+  },
+  {
+    title: "A CCP needs a measurable critical limit",
+    body: "If you can't set a limit you could measure and monitor in real time (a temperature, a time, a pH, a concentration, a mesh size), the step probably isn't a true CCP — the hazard is likely better handled by a prerequisite program.",
+  },
+  {
+    title: "No control measure at all is a red flag",
+    body: "If a significant hazard has no control anywhere in your process, the answer isn't 'not a CCP' — it's that the product or process must change so the hazard can be controlled.",
+  },
+  {
+    title: "Write down your reasoning",
+    body: "Keep the justification for each answer. CFIA inspectors verify that your decisions are supported, and a year from now you won't remember why you answered the way you did.",
+  },
+];
 
 /**
  * Runs the answers so far through the decision tree and returns either the
@@ -72,7 +160,7 @@ export function evaluateDecisionTree(answers: DecisionTreeAnswers): DecisionResu
       status: "NOT_A_CCP",
       reasonKey: "no-control-measure",
       reason:
-        "No control measure exists for this hazard at this or any later step. This is not a CCP as-is — consider whether the process, product formulation, or intended use needs to change to control the hazard elsewhere in the plan.",
+        "No control measure exists for this hazard at this or any later step. This is not a CCP as-is — but if control at this step is necessary for food safety, you must change the process, product formulation, or intended use so the hazard can be controlled somewhere in the plan.",
       nextQuestion: null,
     };
   }
@@ -86,7 +174,7 @@ export function evaluateDecisionTree(answers: DecisionTreeAnswers): DecisionResu
       status: "CCP",
       reasonKey: "step-designed-to-control",
       reason:
-        "This step is specifically designed to eliminate the hazard or reduce it to an acceptable level, so it is a Critical Control Point (CCP) / process preventive control point. Define a critical limit and monitoring procedure for it.",
+        "This step is specifically designed to eliminate the hazard or reduce it to an acceptable level, so it is a Critical Control Point (CCP) / process preventive control point. Define a critical limit and monitoring procedure for it on the next step.",
       nextQuestion: null,
     };
   }
@@ -100,7 +188,7 @@ export function evaluateDecisionTree(answers: DecisionTreeAnswers): DecisionResu
       status: "NOT_A_CCP",
       reasonKey: "no-realistic-contamination-risk",
       reason:
-        "Contamination with this hazard is not reasonably likely to occur or increase to an unacceptable level at this step, so it is not a CCP at this step.",
+        "Contamination with this hazard is not reasonably likely to occur or increase to an unacceptable level at this step, so it is not a CCP at this step. Make sure your justification records why — an inspector will ask.",
       nextQuestion: null,
     };
   }
@@ -114,7 +202,7 @@ export function evaluateDecisionTree(answers: DecisionTreeAnswers): DecisionResu
       status: "NOT_A_CCP",
       reasonKey: "later-step-controls",
       reason:
-        "A later step in the process will eliminate this hazard or reduce it to an acceptable level, so this step is not the CCP — the later step should be evaluated instead.",
+        "A later step will eliminate this hazard or reduce it to an acceptable level, so this step is not the CCP. Important: make sure that later step is itself evaluated through this tree and designated as a CCP — otherwise the hazard ends up controlled nowhere.",
       nextQuestion: null,
     };
   }
@@ -123,7 +211,7 @@ export function evaluateDecisionTree(answers: DecisionTreeAnswers): DecisionResu
     status: "CCP",
     reasonKey: "no-later-control-required-now",
     reason:
-      "Contamination could reach an unacceptable level here and no later step will control it, so this step is a Critical Control Point (CCP). Define a critical limit and monitoring procedure for it.",
+      "Contamination could reach an unacceptable level here and no later step will control it, so this step is a Critical Control Point (CCP). Define a critical limit and monitoring procedure for it on the next step.",
     nextQuestion: null,
   };
 }
@@ -135,3 +223,14 @@ export const QUESTION_ORDER: (keyof DecisionTreeAnswers)[] = [
   "q3CouldContaminationExceedLimit",
   "q4WillLaterStepEliminate",
 ];
+
+/** Renders the answered path so far as e.g. "Q1 Yes → Q2 No → Q3 Yes". */
+export function describeAnswerPath(answers: DecisionTreeAnswers): string {
+  return QUESTION_ORDER.map((q, i) => {
+    const v = answers[q];
+    if (v === null) return null;
+    return `Q${i + 1} ${v ? "Yes" : "No"}`;
+  })
+    .filter(Boolean)
+    .join("  →  ");
+}

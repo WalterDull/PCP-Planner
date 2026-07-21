@@ -63,15 +63,21 @@ export async function PATCH(
 
   // Re-run the decision tree whenever any CCP answer changes, so ccpStatus
   // always reflects the current answers rather than trusting the client.
+  //
+  // Note: we deliberately check `field in body` rather than using `??` here.
+  // Clearing an answer sends an explicit null (the "start this hazard over"
+  // action); with `??` that null would fall back to the previously stored
+  // value, so the answers would be wiped in the database while ccpStatus kept
+  // its old result. Checking key presence honours an intentional null.
   if (CCP_ANSWER_FIELDS.some((f) => f in body)) {
+    const pick = (field: (typeof CCP_ANSWER_FIELDS)[number]): boolean | null =>
+      field in body ? (body[field] as boolean | null) : (hazard[field] as boolean | null);
+
     const answers: DecisionTreeAnswers = {
-      q1DoControlMeasuresExist: (data.ccpQ1DoControlMeasuresExist ?? hazard.ccpQ1DoControlMeasuresExist) as boolean | null,
-      q2IsStepSpecificallyToControl: (data.ccpQ2IsStepSpecificallyToControl ?? hazard.ccpQ2IsStepSpecificallyToControl) as
-        | boolean
-        | null,
-      q3CouldContaminationExceedLimit: (data.ccpQ3CouldContaminationExceedLimit ??
-        hazard.ccpQ3CouldContaminationExceedLimit) as boolean | null,
-      q4WillLaterStepEliminate: (data.ccpQ4WillLaterStepEliminate ?? hazard.ccpQ4WillLaterStepEliminate) as boolean | null,
+      q1DoControlMeasuresExist: pick("ccpQ1DoControlMeasuresExist"),
+      q2IsStepSpecificallyToControl: pick("ccpQ2IsStepSpecificallyToControl"),
+      q3CouldContaminationExceedLimit: pick("ccpQ3CouldContaminationExceedLimit"),
+      q4WillLaterStepEliminate: pick("ccpQ4WillLaterStepEliminate"),
     };
     const result = evaluateDecisionTree(answers);
     data.ccpStatus = result.status;
