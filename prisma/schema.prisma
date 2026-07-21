@@ -82,12 +82,45 @@ model Plan {
   retentionExpiresAt DateTime?
 
   products           Product[]
+  vendors            Vendor[]
   sops               Sop[]
   exports            PlanExport[]
   recallContacts     RecallContact[]
   mockRecallRecords  MockRecallRecord[]
 
   @@index([userId])
+}
+
+// An approved supplier/vendor for the facility. A plan can (and almost always
+// does) have many — including multiple approved vendors for the same
+// ingredient, so a single-source failure doesn't halt production. Vendors are
+// facility-wide (shared across all products) and populate the Approved
+// Supplier List in the vendor-qualification and supplier-verification SOPs and
+// the exported plan.
+model Vendor {
+  id     String @id @default(cuid())
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  name              String
+  materialsSupplied String? // ingredients/materials this vendor supplies
+  contactName       String?
+  phone             String?
+  email             String?
+  // Food safety certification / GFSI status (e.g. "SQF", "BRCGS", "none")
+  certification     String?
+  // Allowed values: "APPROVED" | "PENDING" | "SUSPENDED"
+  status            String  @default("APPROVED")
+  guaranteeOnFile   Boolean @default(false) // signed letter of guarantee held
+  guaranteeExpiry   String? // free text / ISO date the guarantee expires
+  approvalDate      String? // free text / ISO date the vendor was approved
+  notes             String?
+  order             Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planId])
 }
 
 // A single product made at this facility. Most operations make more than
