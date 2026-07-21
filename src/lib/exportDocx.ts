@@ -10,12 +10,13 @@ import {
   TableLayoutType,
   TextRun,
 } from "docx";
-import type { Plan, Product, ProcessStep, Hazard, Sop, RecallContact, MockRecallRecord } from "@prisma/client";
+import type { Plan, Product, ProcessStep, Hazard, Sop, RecallContact, MockRecallRecord, Vendor } from "@prisma/client";
 import type { FacilityProfile } from "@/types";
 import { getTemplate } from "@/lib/sopTemplates";
 
 type PlanWithRelations = Plan & {
   products: (Product & { processSteps: (ProcessStep & { hazards: Hazard[] })[] })[];
+  vendors: Vendor[];
   sops: Sop[];
   recallContacts: RecallContact[];
   mockRecallRecords: MockRecallRecord[];
@@ -179,8 +180,35 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
     }
   }
 
-  // --- 3. GMPs & Prerequisite Programs ------------------------------------
-  children.push(new Paragraph({ text: "3. GMPs & Prerequisite Programs", heading: HeadingLevel.HEADING_1 }));
+  // --- 3. Approved Suppliers ----------------------------------------------
+  children.push(new Paragraph({ text: "3. Approved Suppliers", heading: HeadingLevel.HEADING_1 }));
+  const vendors = [...plan.vendors].sort((a, b) => a.order - b.order);
+  if (vendors.length === 0) {
+    children.push(new Paragraph({ text: "No vendors/suppliers have been added to this plan yet." }));
+  } else {
+    const vendorWidths = pctToDxa([20, 26, 12, 14, 14, 14]);
+    const rows = [
+      headerRow(["Vendor", "Materials supplied", "Status", "Certification", "Guarantee", "Contact"], vendorWidths),
+      ...vendors.map((v) =>
+        dataRow(
+          [
+            v.name,
+            v.materialsSupplied ?? "—",
+            v.status,
+            v.certification ?? "—",
+            v.guaranteeOnFile ? `Yes${v.guaranteeExpiry ? ` (exp. ${v.guaranteeExpiry})` : ""}` : "No",
+            [v.contactName, v.phone, v.email].filter(Boolean).join(", ") || "—",
+          ],
+          vendorWidths
+        )
+      ),
+    ];
+    children.push(makeTable(vendorWidths, rows));
+  }
+  children.push(new Paragraph({ text: "" }));
+
+  // --- 4. GMPs & Prerequisite Programs ------------------------------------
+  children.push(new Paragraph({ text: "4. GMPs & Prerequisite Programs", heading: HeadingLevel.HEADING_1 }));
   const gmpSops = plan.sops.filter((s) => getTemplate(s.templateKey)?.category === "gmp");
   if (gmpSops.length === 0) {
     children.push(new Paragraph({ text: "No GMP / prerequisite program documents have been generated yet." }));
@@ -191,8 +219,8 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
     }
   }
 
-  // --- 4. Process Flow & Hazard Analysis (per product) --------------------
-  children.push(new Paragraph({ text: "4. Process Flow & Hazard Analysis", heading: HeadingLevel.HEADING_1 }));
+  // --- 5. Process Flow & Hazard Analysis (per product) --------------------
+  children.push(new Paragraph({ text: "5. Process Flow & Hazard Analysis", heading: HeadingLevel.HEADING_1 }));
 
   for (const product of products) {
     children.push(new Paragraph({ text: product.name, heading: HeadingLevel.HEADING_2 }));
@@ -238,8 +266,8 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
     }
   }
 
-  // --- 5. Preventive Controls Detail (per product) ------------------------
-  children.push(new Paragraph({ text: "5. Preventive Controls Detail", heading: HeadingLevel.HEADING_1 }));
+  // --- 6. Preventive Controls Detail (per product) ------------------------
+  children.push(new Paragraph({ text: "6. Preventive Controls Detail", heading: HeadingLevel.HEADING_1 }));
   const anyCcps = products.some((p) => p.processSteps.some((s) => s.hazards.some((h) => h.ccpStatus === "CCP" || h.ccpStatus === "PRW")));
   if (!anyCcps) {
     children.push(new Paragraph({ text: "No critical control points or process preventive controls have been designated yet." }));
@@ -264,8 +292,8 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
     }
   }
 
-  // --- 6. Recall Plan ------------------------------------------------------
-  children.push(new Paragraph({ text: "6. Recall Plan", heading: HeadingLevel.HEADING_1 }));
+  // --- 7. Recall Plan ------------------------------------------------------
+  children.push(new Paragraph({ text: "7. Recall Plan", heading: HeadingLevel.HEADING_1 }));
 
   children.push(new Paragraph({ text: "Recall Team", heading: HeadingLevel.HEADING_2 }));
   if (plan.recallContacts.length === 0) {
@@ -315,8 +343,8 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
     children.push(new Paragraph({ text: "" }));
   }
 
-  // --- 7. Food Safety SOPs -------------------------------------------------
-  children.push(new Paragraph({ text: "7. Food Safety SOPs", heading: HeadingLevel.HEADING_1 }));
+  // --- 8. Food Safety SOPs -------------------------------------------------
+  children.push(new Paragraph({ text: "8. Food Safety SOPs", heading: HeadingLevel.HEADING_1 }));
   const foodSafetySops = plan.sops.filter((s) => getTemplate(s.templateKey)?.category === "food_safety");
   if (foodSafetySops.length === 0) {
     children.push(new Paragraph({ text: "No additional food safety SOPs have been generated yet." }));
