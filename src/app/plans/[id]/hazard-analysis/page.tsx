@@ -96,7 +96,7 @@ export default function HazardAnalysisPage({ params }: { params: { id: string } 
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-900">Step 5: Hazard Analysis</h1>
+      <h1 className="text-xl font-bold text-slate-900">Step 6: Hazard Analysis</h1>
       <p className="mt-1 text-sm text-slate-600">
         For each process step, identify biological, chemical, physical, and radiological hazards
         that could reasonably occur, then judge which ones are significant. We&apos;ve suggested

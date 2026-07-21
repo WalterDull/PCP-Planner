@@ -134,7 +134,7 @@ export default function CcpDeterminationPage({ params }: { params: { id: string 
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-900">Step 6: CCP Determination</h1>
+      <h1 className="text-xl font-bold text-slate-900">Step 7: CCP Determination</h1>
       <p className="mt-1 text-sm text-slate-600">
         For each significant hazard, answer the questions in order. This is the standard
         Codex/CFIA four-question decision tree. Not sure how to answer? Open the guide below —
