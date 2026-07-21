@@ -1,4 +1,4 @@
-import type { FacilityProfile, RecallContactData, MockRecallRecordData, ProductSummary } from "@/types";
+import type { FacilityProfile, RecallContactData, MockRecallRecordData, ProductSummary, VendorData } from "@/types";
 
 export interface SopRenderContext {
   facility: FacilityProfile;
@@ -8,6 +8,28 @@ export interface SopRenderContext {
   products?: ProductSummary[];
   recallContacts?: RecallContactData[];
   mockRecalls?: MockRecallRecordData[];
+  /** Approved suppliers — populate the vendor-qualification and
+   *  supplier-verification SOPs' Approved Supplier List. */
+  vendors?: VendorData[];
+}
+
+/** Renders the Approved Supplier List as a markdown table for SOP documents,
+ *  or a placeholder line if no vendors have been added yet. */
+function approvedSupplierTable(vendors: VendorData[] | undefined): string {
+  if (!vendors || vendors.length === 0) {
+    return "[No vendors added yet — add them on the Vendors / Suppliers step and regenerate this document.]";
+  }
+  const header =
+    "| Vendor | Materials supplied | Status | Certification | Guarantee on file | Contact |\n| --- | --- | --- | --- | --- | --- |";
+  const rows = vendors
+    .map((v) => {
+      const contact = [v.contactName, v.phone, v.email].filter(Boolean).join(", ") || "—";
+      return `| ${v.name || "—"} | ${v.materialsSupplied || "—"} | ${v.status || "—"} | ${
+        v.certification || "—"
+      } | ${v.guaranteeOnFile ? "Yes" : "No"}${v.guaranteeExpiry ? ` (exp. ${v.guaranteeExpiry})` : ""} | ${contact} |`;
+    })
+    .join("\n");
+  return `${header}\n${rows}`;
 }
 
 export type SopCategory = "gmp" | "food_safety" | "recall";
@@ -176,7 +198,7 @@ or GMP checklist and retained for [retention period].
     key: "vendor_qualification",
     title: "Vendor & Supplier Qualification Program",
     category: "gmp",
-    render: ({ facility: f }) => `# Vendor & Supplier Qualification Program
+    render: ({ facility: f, vendors }) => `# Vendor & Supplier Qualification Program
 
 **Facility:** ${fallback(f.facilityName, "[Facility Name]")}
 
@@ -184,6 +206,8 @@ or GMP checklist and retained for [retention period].
 Ensures that vendors and suppliers of ingredients, packaging, and
 food-contact services meet the food safety requirements of
 ${fallback(f.facilityName, "[Facility Name]")} before being approved for use.
+Maintaining more than one approved vendor for critical materials avoids a
+single-source supply vulnerability.
 
 ## Qualification Process
 1. New vendors submit relevant documentation (e.g., food safety
@@ -193,8 +217,11 @@ ${fallback(f.facilityName, "[Facility Name]")} before being approved for use.
 2. Documentation is reviewed against this facility's requirements; vendors
    supplying a hazard this facility relies on them to control are subject to
    the additional verification activities in the Supply-Chain Program.
-3. Approved vendors are added to the Approved Vendor List with the date of
-   approval and the individual who approved them.
+3. Approved vendors are added to the Approved Supplier List below with the
+   date of approval and the individual who approved them.
+
+## Approved Supplier List
+${approvedSupplierTable(vendors)}
 
 ## Ongoing Requirements
 Approved vendors must notify ${fallback(
@@ -1206,7 +1233,7 @@ Temperature logs are retained for [retention period].
     key: "supplier_verification",
     title: "Supply-Chain (Supplier Verification) Program",
     category: "food_safety",
-    render: ({ facility: f }) => `# Supply-Chain Program
+    render: ({ facility: f, vendors }) => `# Supply-Chain Program
 
 **Facility:** ${fallback(f.facilityName, "[Facility Name]")}
 
@@ -1225,6 +1252,10 @@ the approved list after:
    Preventive Control Plan summary, GFSI certification, or equivalent).
 2. Confirming the supplier's control of the hazard(s) this facility is relying
    on them to manage.
+
+Current approved suppliers:
+
+${approvedSupplierTable(vendors)}
 
 ## Verification Activities
 Depending on hazard severity and supplier risk, verification may include:
