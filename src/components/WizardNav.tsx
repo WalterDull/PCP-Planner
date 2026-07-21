@@ -7,13 +7,14 @@ const STEPS = [
   { slug: "facility", label: "1. Facility Profile" },
   { slug: "gmp", label: "2. GMPs & Prerequisites" },
   { slug: "products", label: "3. Products" },
-  { slug: "process-flow", label: "4. Process Flow" },
-  { slug: "hazard-analysis", label: "5. Hazard Analysis" },
-  { slug: "ccp-determination", label: "6. CCP Determination" },
-  { slug: "preventive-controls", label: "7. Preventive Controls" },
-  { slug: "recall", label: "8. Recall Plan" },
-  { slug: "sops", label: "9. SOPs" },
-  { slug: "review-export", label: "10. Review & Export" },
+  { slug: "vendors", label: "4. Vendors / Suppliers" },
+  { slug: "process-flow", label: "5. Process Flow" },
+  { slug: "hazard-analysis", label: "6. Hazard Analysis" },
+  { slug: "ccp-determination", label: "7. CCP Determination" },
+  { slug: "preventive-controls", label: "8. Preventive Controls" },
+  { slug: "recall", label: "9. Recall Plan" },
+  { slug: "sops", label: "10. SOPs" },
+  { slug: "review-export", label: "11. Review & Export" },
 ];
 
 export default function WizardNav({ planId }: { planId: string }) {

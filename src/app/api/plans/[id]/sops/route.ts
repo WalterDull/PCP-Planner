@@ -38,14 +38,17 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const parsedProfile: Partial<FacilityProfile> = owned.facilityProfile ? JSON.parse(owned.facilityProfile) : {};
   const facility = { ...EMPTY_FACILITY_PROFILE, ...parsedProfile };
 
-  // Only the recall template needs the recall team/mock-recall history, but
-  // fetching them (and the product list) is cheap and keeps this route simple.
-  const [products, recallContacts, mockRecallRecords] = await Promise.all([
+  // Only the recall template needs the recall team/mock-recall history, and
+  // only the vendor templates need the vendor list, but fetching them is
+  // cheap and keeps this route simple.
+  const needsVendors = template.key === "vendor_qualification" || template.key === "supplier_verification";
+  const [products, recallContacts, mockRecallRecords, vendors] = await Promise.all([
     db.product.findMany({ where: { planId: owned.id }, orderBy: { order: "asc" } }),
     template.key === "recall"
       ? db.recallContact.findMany({ where: { planId: owned.id }, orderBy: { order: "asc" } })
       : Promise.resolve([]),
     template.key === "recall" ? db.mockRecallRecord.findMany({ where: { planId: owned.id } }) : Promise.resolve([]),
+    needsVendors ? db.vendor.findMany({ where: { planId: owned.id }, orderBy: { order: "asc" } }) : Promise.resolve([]),
   ]);
 
   const content = template.render({
@@ -65,6 +68,21 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       performedBy: r.performedBy,
       percentTraced: r.percentTraced,
       resultsSummary: r.resultsSummary,
+    })),
+    vendors: vendors.map((v) => ({
+      id: v.id,
+      name: v.name,
+      materialsSupplied: v.materialsSupplied,
+      contactName: v.contactName,
+      phone: v.phone,
+      email: v.email,
+      certification: v.certification,
+      status: v.status,
+      guaranteeOnFile: v.guaranteeOnFile,
+      guaranteeExpiry: v.guaranteeExpiry,
+      approvalDate: v.approvalDate,
+      notes: v.notes,
+      order: v.order,
     })),
   });
 

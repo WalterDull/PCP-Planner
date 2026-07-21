@@ -52,6 +52,24 @@ export interface MockRecallRecordData {
   resultsSummary: string | null;
 }
 
+export interface VendorData {
+  id: string;
+  name: string;
+  materialsSupplied: string | null;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  certification: string | null;
+  status: string; // "APPROVED" | "PENDING" | "SUSPENDED"
+  guaranteeOnFile: boolean;
+  guaranteeExpiry: string | null;
+  approvalDate: string | null;
+  notes: string | null;
+  order: number;
+}
+
+export const VENDOR_STATUSES = ["APPROVED", "PENDING", "SUSPENDED"] as const;
+
 export const SUGGESTED_RECALL_ROLES = [
   "Recall Coordinator",
   "Alternate Recall Coordinator",

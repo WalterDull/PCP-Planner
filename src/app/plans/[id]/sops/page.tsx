@@ -4,7 +4,7 @@ import TemplateDocsEditor from "@/components/TemplateDocsEditor";
 export default function SopsPage({ params }: { params: { id: string } }) {
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-900">Step 9: Food Safety SOPs</h1>
+      <h1 className="text-xl font-bold text-slate-900">Step 10: Food Safety SOPs</h1>
       <p className="mt-1 text-sm text-slate-600">
         Generate hazard-specific SOPs from templates, pre-filled with your facility profile. Edit
         the text directly below to match your actual practices — these are starting drafts, not

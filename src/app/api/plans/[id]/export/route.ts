@@ -15,6 +15,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         include: { processSteps: { include: { hazards: true }, orderBy: { order: "asc" } } },
         orderBy: { order: "asc" },
       },
+      vendors: { orderBy: { order: "asc" } },
       sops: true,
       recallContacts: { orderBy: { order: "asc" } },
       mockRecallRecords: { orderBy: { performedAt: "desc" } },
