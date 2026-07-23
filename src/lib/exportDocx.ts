@@ -9,6 +9,10 @@ import {
   WidthType,
   TableLayoutType,
   TextRun,
+  TableOfContents,
+  Footer,
+  PageNumber,
+  AlignmentType,
 } from "docx";
 import type { Plan, Product, ProcessStep, Hazard, Sop, RecallContact, MockRecallRecord, Vendor } from "@prisma/client";
 import type { FacilityProfile } from "@/types";
@@ -68,6 +72,25 @@ function makeTable(widthsDxa: number[], rows: TableRow[]): Table {
   });
 }
 
+const HEADING_BY_LEVEL = [
+  HeadingLevel.HEADING_1,
+  HeadingLevel.HEADING_2,
+  HeadingLevel.HEADING_3,
+  HeadingLevel.HEADING_4,
+  HeadingLevel.HEADING_5,
+  HeadingLevel.HEADING_6,
+];
+
+function headingForLevel(level: number) {
+  return HEADING_BY_LEVEL[Math.min(Math.max(level, 1), 6) - 1];
+}
+
+// A top-level (numbered) plan section. Heading 1 so it appears in the index;
+// starts on a fresh page so the document reads as distinct sections.
+function sectionHeading(text: string): Paragraph {
+  return new Paragraph({ text, heading: HeadingLevel.HEADING_1, pageBreakBefore: true });
+}
+
 function isTableRow(line: string): boolean {
   return line.trim().startsWith("|");
 }
@@ -88,8 +111,11 @@ function parseCells(line: string): string[] {
 
 // Renders a template's markdown-ish text into docx blocks, turning pipe
 // tables (| a | b |) into real, properly-sized docx tables and everything
-// else into paragraphs/headings.
-function markdownToBlocks(md: string): (Paragraph | Table)[] {
+// else into paragraphs/headings. `demote` pushes the document's own headings
+// down N levels so, e.g., an SOP rendered inside the "GMPs" section becomes a
+// Heading 2 sub-section (its title shows in the index) rather than a top-level
+// Heading 1 competing with the main sections.
+function markdownToBlocks(md: string, demote = 0): (Paragraph | Table)[] {
   const lines = md.split("\n");
   const blocks: (Paragraph | Table)[] = [];
   let i = 0;
@@ -121,11 +147,11 @@ function markdownToBlocks(md: string): (Paragraph | Table)[] {
     }
 
     if (line.startsWith("# ")) {
-      blocks.push(new Paragraph({ text: line.replace("# ", ""), heading: HeadingLevel.HEADING_1 }));
+      blocks.push(new Paragraph({ text: line.replace("# ", ""), heading: headingForLevel(1 + demote) }));
     } else if (line.startsWith("## ")) {
-      blocks.push(new Paragraph({ text: line.replace("## ", ""), heading: HeadingLevel.HEADING_2 }));
+      blocks.push(new Paragraph({ text: line.replace("## ", ""), heading: headingForLevel(2 + demote) }));
     } else if (line.startsWith("### ")) {
-      blocks.push(new Paragraph({ text: line.replace("### ", ""), heading: HeadingLevel.HEADING_3 }));
+      blocks.push(new Paragraph({ text: line.replace("### ", ""), heading: headingForLevel(3 + demote) }));
     } else if (line.trim().length === 0) {
       blocks.push(new Paragraph({ text: "" }));
     } else {
@@ -143,14 +169,25 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
   const facility: Partial<FacilityProfile> = plan.facilityProfile ? JSON.parse(plan.facilityProfile) : {};
   const products = [...plan.products].sort((a, b) => a.order - b.order);
 
-  const children: (Paragraph | Table)[] = [];
+  const children: (Paragraph | Table | TableOfContents)[] = [];
 
-  // --- 1. Facility Profile -------------------------------------------------
+  // --- Title page + index --------------------------------------------------
   children.push(
     new Paragraph({ text: "Preventive Control Plan", heading: HeadingLevel.TITLE }),
     new Paragraph({ text: plan.name, heading: HeadingLevel.HEADING_2 }),
     new Paragraph({ text: "" }),
-    new Paragraph({ text: "1. Facility Profile", heading: HeadingLevel.HEADING_1 }),
+    // "Contents" is a plain bold label (not a heading) so it doesn't list
+    // itself in the index below.
+    new Paragraph({ children: [new TextRun({ text: "Contents", bold: true, size: 28 })] }),
+    // Real Word table-of-contents field: lists Heading 1 (main sections) and
+    // Heading 2 (each product, GMP, and SOP) with page numbers and clickable
+    // links. Populates when the document opens (updateFields is set below).
+    new TableOfContents("Contents", { hyperlink: true, headingStyleRange: "1-2" })
+  );
+
+  // --- 1. Facility Profile -------------------------------------------------
+  children.push(
+    sectionHeading("1. Facility Profile"),
     new Paragraph({ text: `Facility name: ${facility.facilityName ?? ""}` }),
     new Paragraph({ text: `Address: ${facility.address ?? ""}` }),
     new Paragraph({ text: `Food categories: ${facility.foodCategories ?? ""}` }),
@@ -165,7 +202,7 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
   );
 
   // --- 2. Products -----------------------------------------------------------
-  children.push(new Paragraph({ text: "2. Products", heading: HeadingLevel.HEADING_1 }));
+  children.push(sectionHeading("2. Products"));
   if (products.length === 0) {
     children.push(new Paragraph({ text: "No products have been added to this plan yet." }));
   } else {
@@ -181,7 +218,7 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
   }
 
   // --- 3. Approved Suppliers ----------------------------------------------
-  children.push(new Paragraph({ text: "3. Approved Suppliers", heading: HeadingLevel.HEADING_1 }));
+  children.push(sectionHeading("3. Approved Suppliers"));
   const vendors = [...plan.vendors].sort((a, b) => a.order - b.order);
   if (vendors.length === 0) {
     children.push(new Paragraph({ text: "No vendors/suppliers have been added to this plan yet." }));
@@ -208,19 +245,19 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
   children.push(new Paragraph({ text: "" }));
 
   // --- 4. GMPs & Prerequisite Programs ------------------------------------
-  children.push(new Paragraph({ text: "4. GMPs & Prerequisite Programs", heading: HeadingLevel.HEADING_1 }));
+  children.push(sectionHeading("4. GMPs & Prerequisite Programs"));
   const gmpSops = plan.sops.filter((s) => getTemplate(s.templateKey)?.category === "gmp");
   if (gmpSops.length === 0) {
     children.push(new Paragraph({ text: "No GMP / prerequisite program documents have been generated yet." }));
   } else {
     for (const sop of gmpSops) {
-      children.push(...markdownToBlocks(sop.content));
+      children.push(...markdownToBlocks(sop.content, 1));
       children.push(new Paragraph({ text: "" }));
     }
   }
 
   // --- 5. Process Flow & Hazard Analysis (per product) --------------------
-  children.push(new Paragraph({ text: "5. Process Flow & Hazard Analysis", heading: HeadingLevel.HEADING_1 }));
+  children.push(sectionHeading("5. Process Flow & Hazard Analysis"));
 
   for (const product of products) {
     children.push(new Paragraph({ text: product.name, heading: HeadingLevel.HEADING_2 }));
@@ -267,7 +304,7 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
   }
 
   // --- 6. Preventive Controls Detail (per product) ------------------------
-  children.push(new Paragraph({ text: "6. Preventive Controls Detail", heading: HeadingLevel.HEADING_1 }));
+  children.push(sectionHeading("6. Preventive Controls Detail"));
   const anyCcps = products.some((p) => p.processSteps.some((s) => s.hazards.some((h) => h.ccpStatus === "CCP" || h.ccpStatus === "PRW")));
   if (!anyCcps) {
     children.push(new Paragraph({ text: "No critical control points or process preventive controls have been designated yet." }));
@@ -293,7 +330,7 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
   }
 
   // --- 7. Recall Plan ------------------------------------------------------
-  children.push(new Paragraph({ text: "7. Recall Plan", heading: HeadingLevel.HEADING_1 }));
+  children.push(sectionHeading("7. Recall Plan"));
 
   children.push(new Paragraph({ text: "Recall Team", heading: HeadingLevel.HEADING_2 }));
   if (plan.recallContacts.length === 0) {
@@ -339,18 +376,18 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
 
   const recallSop = plan.sops.find((s) => s.templateKey === "recall");
   if (recallSop) {
-    children.push(...markdownToBlocks(recallSop.content));
+    children.push(...markdownToBlocks(recallSop.content, 1));
     children.push(new Paragraph({ text: "" }));
   }
 
   // --- 8. Food Safety SOPs -------------------------------------------------
-  children.push(new Paragraph({ text: "8. Food Safety SOPs", heading: HeadingLevel.HEADING_1 }));
+  children.push(sectionHeading("8. Food Safety SOPs"));
   const foodSafetySops = plan.sops.filter((s) => getTemplate(s.templateKey)?.category === "food_safety");
   if (foodSafetySops.length === 0) {
     children.push(new Paragraph({ text: "No additional food safety SOPs have been generated yet." }));
   } else {
     for (const sop of foodSafetySops) {
-      children.push(...markdownToBlocks(sop.content));
+      children.push(...markdownToBlocks(sop.content, 1));
       children.push(new Paragraph({ text: "" }));
     }
   }
@@ -364,7 +401,31 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
   );
 
   const doc = new Document({
-    sections: [{ properties: {}, children }],
+    // Tells Word to update fields (the table of contents) when the document is
+    // opened, so the index shows the right page numbers without the reader
+    // having to right-click and "Update field".
+    features: { updateFields: true },
+    sections: [
+      {
+        properties: {},
+        footers: {
+          default: new Footer({
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun("Page "),
+                  new TextRun({ children: [PageNumber.CURRENT] }),
+                  new TextRun(" of "),
+                  new TextRun({ children: [PageNumber.TOTAL_PAGES] }),
+                ],
+              }),
+            ],
+          }),
+        },
+        children,
+      },
+    ],
   });
 
   return Packer.toBuffer(doc);
