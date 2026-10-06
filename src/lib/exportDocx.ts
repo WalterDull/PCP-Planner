@@ -21,6 +21,7 @@ import {
   ShadingType,
   BorderStyle,
 } from "docx";
+import JSZip from "jszip";
 import type { Plan, Product, ProcessStep, Hazard, Sop, RecallContact, MockRecallRecord, Vendor } from "@prisma/client";
 import type { FacilityProfile } from "@/types";
 import { getTemplate } from "@/lib/sopTemplates";
@@ -538,6 +539,18 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
         },
       },
       paragraphStyles: [
+        // docx-js never writes a "Normal" style, so ordinary paragraphs end
+        // up with no paragraph style at all. Word copes; Pages does not — it
+        // folds them into a heading style, so every line lands in its table
+        // of contents and starts a new page. normalizeForPages() below marks
+        // this as the default style and assigns it to every bare paragraph.
+        {
+          id: "Normal",
+          name: "Normal",
+          quickFormat: true,
+          run: { font: "Calibri", size: 22 },
+          paragraph: { spacing: { after: 120, line: 264 } },
+        },
         {
           id: "PlanSubtitle",
           name: "Plan Subtitle",
@@ -560,7 +573,7 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
           basedOn: "Normal",
           next: "Normal",
           run: { color: "1F1F1F" },
-          paragraph: { spacing: { before: 120, after: 20 }, keepNext: true },
+          paragraph: { spacing: { before: 80, after: 0 }, keepNext: true },
         },
         {
           id: "Contents2",
@@ -568,7 +581,7 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
           basedOn: "Normal",
           next: "Normal",
           run: { color: "404040", size: 20 },
-          paragraph: { indent: { left: 360 }, spacing: { after: 20 } },
+          paragraph: { indent: { left: 360 }, spacing: { after: 0 } },
         },
       ],
     },
@@ -623,5 +636,32 @@ export async function buildPlanDocx(plan: PlanWithRelations): Promise<Buffer> {
     ],
   });
 
-  return Packer.toBuffer(doc);
+  return normalizeForPages(await Packer.toBuffer(doc));
+}
+
+// Post-processes the packed file so it opens cleanly in Apple Pages (see the
+// note on the "Normal" style above): flags Normal as the default paragraph
+// style and gives every paragraph without a style an explicit Normal.
+async function normalizeForPages(buffer: Buffer): Promise<Buffer> {
+  const zip = await JSZip.loadAsync(buffer);
+
+  const stylesFile = zip.file("word/styles.xml");
+  if (stylesFile) {
+    const styles = (await stylesFile.async("string")).replace(
+      /<w:style w:type="paragraph" w:styleId="Normal">/,
+      '<w:style w:type="paragraph" w:default="1" w:styleId="Normal">'
+    );
+    zip.file("word/styles.xml", styles);
+  }
+
+  for (const part of ["word/document.xml", "word/footer1.xml"]) {
+    const file = zip.file(part);
+    if (!file) continue;
+    const xml = (await file.async("string"))
+      .replace(/<w:p>(?!<w:pPr>)/g, '<w:p><w:pPr><w:pStyle w:val="Normal"/></w:pPr>')
+      .replace(/<w:p><w:pPr>(?!<w:pStyle)/g, '<w:p><w:pPr><w:pStyle w:val="Normal"/>');
+    zip.file(part, xml);
+  }
+
+  return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
 }
